@@ -1,0 +1,8 @@
+{
+  "name": "Fahim - AI Tutor",
+  "description": "An interactive AI tutor with a 'Liquid Glass' UI, focusing on simplifying complex concepts through interactive sandboxes and an Egyptian colloquial personality.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
