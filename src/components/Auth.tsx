@@ -18,10 +18,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     year: '',
     bio: ''
   });
+  const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(null);
     sounds.playClick();
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -40,11 +42,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           setStep(1);
           setFormData({ ...formData, name: user.displayName || '' });
         }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
       }
-    } catch (error) {
-      console.error("Login Error:", error);
+    } catch (err: any) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        console.log("User closed the login popup.");
+        // No need to show a scary error, just reset loading
+      } else {
+        console.error("Login Error:", err);
+        setError("حصل مشكلة في تسجيل الدخول. جرب تاني كدة؟");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,12 +114,27 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {step === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <p className="text-center text-slate-600 font-medium">سجل دخولك عشان نبدأ رحلة المذاكرة سوا!</p>
+              
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-rose-50 text-rose-600 p-3 rounded-xl text-xs text-center font-bold border border-rose-100"
+                >
+                  {error}
+                </motion.div>
+              )}
+
               <button 
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 p-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 p-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
               >
-                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                ) : (
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                )}
                 <span>تسجيل الدخول بجوجل</span>
               </button>
             </motion.div>
