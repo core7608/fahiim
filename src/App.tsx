@@ -98,22 +98,6 @@ export default function App() {
     }
   }, [user?.settings?.customColors]);
 
-  useEffect(() => {
-    const loadDriveData = async () => {
-      if (user?.settings?.googleDriveEnabled) {
-        try {
-          const data = await loadFromDrive();
-          if (data && data.user) {
-            setUser(data.user);
-          }
-        } catch (e) {
-          console.error("Auto-load Drive failed:", e);
-        }
-      }
-    };
-    if (user) loadDriveData();
-  }, [user?.settings?.googleDriveEnabled]);
-
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-white">

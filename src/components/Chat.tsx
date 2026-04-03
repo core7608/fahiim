@@ -196,9 +196,25 @@ export const Chat: React.FC<ChatProps> = ({ user, studyPlan, onUpdateUser, onUpd
       };
 
       if (jsxMatch) {
+        let jsxCode = jsxMatch[1];
+        // Clean imports/exports if present
+        jsxCode = jsxCode
+          .replace(/import[\s\S]*?from\s+['"].*?['"];?/g, '')
+          .replace(/export\s+default\s+/g, '')
+          .replace(/export\s+/g, '')
+          .trim();
+        
+        // Ensure render() if not present
+        if (!jsxCode.includes('render(')) {
+          const componentNameMatch = jsxCode.match(/const\s+(\w+)\s*=/);
+          if (componentNameMatch) {
+            jsxCode += `\n\nrender(<${componentNameMatch[1]} />);`;
+          }
+        }
+
         modelMsg.interactive = {
           type: 'jsx',
-          props: { code: jsxMatch[1] }
+          props: { code: jsxCode }
         };
       } else if (interactiveMatch) {
         try {
@@ -617,9 +633,13 @@ export const Chat: React.FC<ChatProps> = ({ user, studyPlan, onUpdateUser, onUpd
             <button 
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading || isLoading}
-              className="p-3 hover:bg-slate-50 text-slate-400 rounded-2xl transition-all"
+              className={cn(
+                "p-3 rounded-2xl transition-all",
+                isUploading ? "bg-blue-50 text-glass-blue" : "hover:bg-slate-50 text-slate-400"
+              )}
+              title="إرفاق ملف"
             >
-              {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+              {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
             </button>
             <button 
               onClick={toggleListening}

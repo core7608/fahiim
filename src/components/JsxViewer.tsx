@@ -35,6 +35,16 @@ export const JsxViewer: React.FC<JsxViewerProps> = ({ code, className }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const cleanCode = (rawCode: string) => {
+    return rawCode
+      .replace(/import[\s\S]*?from\s+['"].*?['"];?/g, '')
+      .replace(/export\s+default\s+/g, '')
+      .replace(/export\s+/g, '')
+      .trim();
+  };
+
+  const processedCode = cleanCode(code);
+
   return (
     <div className={cn(
       "glass-card overflow-hidden transition-all duration-500",
@@ -86,7 +96,7 @@ export const JsxViewer: React.FC<JsxViewerProps> = ({ code, className }) => {
         "relative bg-slate-50",
         isExpanded ? "h-[calc(100%-64px)]" : "h-[400px]"
       )}>
-        <LiveProvider code={code} scope={scope} noInline={code.includes('render(')}>
+        <LiveProvider code={processedCode} scope={scope} noInline={processedCode.includes('render(')}>
           {view === 'preview' ? (
             <div className="h-full overflow-auto p-6">
               <LivePreview />
