@@ -49,6 +49,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       if (err.code === 'auth/popup-closed-by-user') {
         console.log("User closed the login popup.");
         // No need to show a scary error, just reset loading
+      } else if (err.code === 'auth/unauthorized-domain') {
+        console.error("Unauthorized Domain Error:", err);
+        const currentDomain = window.location.hostname;
+        setError(`النطاق (${currentDomain}) مش متسجل في Firebase. لازم تضيفه في Authorized Domains في Firebase Console.`);
       } else {
         console.error("Login Error:", err);
         setError("حصل مشكلة في تسجيل الدخول. جرب تاني كدة؟");
@@ -119,9 +123,19 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-rose-50 text-rose-600 p-3 rounded-xl text-xs text-center font-bold border border-rose-100"
+                  className="bg-rose-50 text-rose-600 p-4 rounded-xl text-xs text-center font-bold border border-rose-100 flex flex-col gap-2"
                 >
-                  {error}
+                  <span>{error}</span>
+                  {error.includes("النطاق") && (
+                    <a 
+                      href={`https://console.firebase.google.com/project/fahim-87888/authentication/settings`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      اضغط هنا لإضافة النطاق
+                    </a>
+                  )}
                 </motion.div>
               )}
 

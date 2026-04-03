@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { Message, User as UserType, StudyItem, ChatSession } from '@/src/types';
 import { getFahimResponse, getFahimResponseStream } from '@/src/services/gemini';
 import { InteractiveRenderer } from './InteractiveRenderer';
+import { CodeBlock } from './CodeBlock';
 import { cn } from '@/src/lib/utils';
 import { sounds } from '@/src/lib/sounds';
 import { db, collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, storage, ref, uploadBytes, getDownloadURL, handleFirestoreError, OperationType, getDocs, limit } from '@/src/lib/firebase';
@@ -179,11 +180,11 @@ export const Chat: React.FC<ChatProps> = ({ user, studyPlan, onUpdateUser, onUpd
       const planMatch = fullResponse.match(/```study-plan-json\n([\s\S]*?)\n```/);
       
       let cleanText = fullResponse
-        .replace(/```interactive-component\n([\s\S]*?)\n```/, '')
-        .replace(/```jsx\n([\s\S]*?)\n```/, '')
-        .replace(/```theme-json\n([\s\S]*?)\n```/, '')
-        .replace(/```quiz-json\n([\s\S]*?)\n```/, '')
-        .replace(/```study-plan-json\n([\s\S]*?)\n```/, '')
+        .replace(/```interactive-component\n([\s\S]*?)\n```/g, '')
+        .replace(/```jsx\n([\s\S]*?)\n```/g, '')
+        .replace(/```theme-json\n([\s\S]*?)\n```/g, '')
+        .replace(/```quiz-json\n([\s\S]*?)\n```/g, '')
+        .replace(/```study-plan-json\n([\s\S]*?)\n```/g, '')
         .trim();
       
       const modelMsg: any = {
@@ -244,7 +245,7 @@ export const Chat: React.FC<ChatProps> = ({ user, studyPlan, onUpdateUser, onUpd
       const fileRef = ref(storage, `uploads/${user.uid}/${Date.now()}_${file.name}`);
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
-      await handleSend(`[ملف مرفق: ${file.name}]`, { url, name: file.name, base64, mimeType: file.type });
+      await handleSend(`يا فهيم، بص على الملف ده (${file.name}) وقولي إيه اللي فيه واشرحهولي ببساطة.`, { url, name: file.name, base64, mimeType: file.type });
     } catch (error) {
       console.error("Upload Error:", error);
     } finally {
@@ -528,6 +529,10 @@ export const Chat: React.FC<ChatProps> = ({ user, studyPlan, onUpdateUser, onUpd
                               </div>
                             </div>
                           );
+                        }
+                        
+                        if (!inline && lang) {
+                          return <CodeBlock code={content} language={lang} />;
                         }
                         
                         return (

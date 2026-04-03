@@ -21,9 +21,23 @@
             "geminiApiKey": { "type": "string" },
             "openaiApiKey": { "type": "string" }
           }
-        }
+        },
+        "phone": { "type": "string", "description": "Verified phone number" },
+        "phoneVerified": { "type": "boolean", "description": "Whether the phone number is verified" }
       },
       "required": ["uid", "name", "year", "email"]
+    },
+    "Notification": {
+      "title": "WhatsApp Notification",
+      "description": "Stores sent WhatsApp updates.",
+      "type": "object",
+      "properties": {
+        "adminId": { "type": "string" },
+        "message": { "type": "string" },
+        "recipientCount": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminId", "message", "timestamp"]
     },
     "Message": {
       "title": "Chat Message",
@@ -66,6 +80,10 @@
     "sessions/{sessionId}": {
       "schema": "Session",
       "description": "Chat sessions"
+    },
+    "notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Sent WhatsApp updates"
     }
   }
 }

@@ -20,7 +20,11 @@ import {
   HardDrive,
   Upload,
   Check,
-  Download
+  Download,
+  Phone,
+  Smartphone,
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { User, UserSettings, ThemeConfig } from '@/src/types';
@@ -55,6 +59,61 @@ export const SettingsView: React.FC<SettingsProps> = ({ user, onBack, onUpdateUs
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+
+  // Phone Verification State
+  const [phoneNumber, setPhoneNumber] = useState(user.phone || '');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [step, setStep] = useState<'input' | 'verify'>(user.phoneVerified ? 'input' : 'input');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+
+  const handleSendCode = async () => {
+    if (!phoneNumber.startsWith('+')) {
+      alert('لازم الرقم يبدأ بـ + وكود الدولة (مثلاً: +966)');
+      return;
+    }
+    setIsSendingCode(true);
+    sounds.playClick();
+    try {
+      const response = await fetch('/api/whatsapp/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber })
+      });
+      if (response.ok) {
+        setStep('verify');
+        sounds.playSuccess();
+      } else {
+        alert('فشل إرسال الكود. جرب تاني.');
+      }
+    } catch (error) {
+      console.error("Send Code Error:", error);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) return;
+    setIsVerifying(true);
+    sounds.playClick();
+    try {
+      // In a real app, you'd verify with the backend. 
+      // For this mock, we'll just update Firestore directly.
+      await updateDoc(doc(db, 'users', user.uid), {
+        phone: phoneNumber,
+        phoneVerified: true
+      });
+      onUpdateUser({ ...user, phone: phoneNumber, phoneVerified: true });
+      sounds.playSuccess();
+      setStep('input');
+      alert('تم تفعيل رقمك بنجاح! هتوصلك تحديثات فهيم على الواتساب.');
+    } catch (error) {
+      console.error("Verify Error:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const handleDriveSync = async () => {
     setIsSyncing(true);
@@ -342,6 +401,96 @@ export const SettingsView: React.FC<SettingsProps> = ({ user, onBack, onUpdateUs
                   </p>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Phone Section */}
+          <section className="space-y-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2">تحديثات واتساب</h3>
+            <div className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700">ربط رقم الواتساب</p>
+                  <p className="text-[10px] text-slate-400">استقبل أهم التحديثات والدروس على موبايلك</p>
+                </div>
+              </div>
+
+              {user.phoneVerified ? (
+                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-700">{user.phone}</p>
+                      <p className="text-[10px] text-emerald-600">الرقم مفعل وجاهز للاستقبال</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      updateDoc(doc(db, 'users', user.uid), { phoneVerified: false });
+                      onUpdateUser({ ...user, phoneVerified: false });
+                    }}
+                    className="text-xs font-bold text-emerald-600 hover:underline"
+                  >
+                    تغيير الرقم
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {step === 'input' ? (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Smartphone className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input 
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={e => setPhoneNumber(e.target.value)}
+                          placeholder="+966XXXXXXXXX"
+                          className="liquid-input w-full pr-12 text-sm"
+                        />
+                      </div>
+                      <button 
+                        onClick={handleSendCode}
+                        disabled={isSendingCode || !phoneNumber}
+                        className="bg-emerald-500 text-white px-6 py-2 rounded-xl font-bold text-xs hover:bg-emerald-600 transition-all disabled:opacity-50"
+                      >
+                        {isSendingCode ? <Loader2 className="w-4 h-4 animate-spin" /> : 'إرسال الكود'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-xs text-slate-500 text-center">أدخل الكود المكون من 6 أرقام اللي وصلك على الواتساب</p>
+                      <div className="flex gap-2 justify-center">
+                        <input 
+                          type="text"
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={e => setVerificationCode(e.target.value)}
+                          placeholder="XXXXXX"
+                          className="liquid-input w-32 text-center text-lg font-black tracking-[0.5em]"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={handleVerifyCode}
+                          disabled={isVerifying || verificationCode.length !== 6}
+                          className="flex-1 bg-emerald-500 text-white py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all disabled:opacity-50"
+                        >
+                          {isVerifying ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'تأكيد الكود'}
+                        </button>
+                        <button 
+                          onClick={() => setStep('input')}
+                          className="px-4 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-xs"
+                        >
+                          رجوع
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

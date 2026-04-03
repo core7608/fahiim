@@ -6,6 +6,8 @@ export interface User {
   email?: string;
   photoURL?: string;
   settings?: UserSettings;
+  phone?: string;
+  phoneVerified?: boolean;
   customTools?: Tool[]; // Tools saved in Drive/Firestore
 }
 

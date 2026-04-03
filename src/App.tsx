@@ -5,6 +5,7 @@ import { Auth } from './components/Auth';
 import { Chat } from './components/Chat';
 import { Toolbox } from './components/Toolbox';
 import { SettingsView } from './components/SettingsView';
+import { AdminDashboard } from './components/AdminDashboard';
 import { User, INITIAL_STUDY_PLAN, StudyItem } from './types';
 import { cn } from './lib/utils';
 import { sounds } from './lib/sounds';
@@ -17,9 +18,11 @@ import JSZip from 'jszip';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'plan' | 'profile' | 'settings' | 'tools'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'plan' | 'profile' | 'settings' | 'tools' | 'admin'>('chat');
   const [isGenerating, setIsGenerating] = useState(false);
   const [studyPlan, setStudyPlan] = useState<StudyItem[]>(INITIAL_STUDY_PLAN);
+
+  const isAdmin = user?.email === 'raed41590@gmail.com' || user?.phone === '+966573192557';
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -142,6 +145,17 @@ export default function App() {
                 onUpdateUser={setUser} 
                 onUpdateStudyPlan={setStudyPlan}
               />
+            </motion.div>
+          )}
+          {activeTab === 'admin' && isAdmin && (
+            <motion.div 
+              key="admin"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="h-full"
+            >
+              <AdminDashboard admin={user} />
             </motion.div>
           )}
           {activeTab === 'tools' && (
@@ -339,6 +353,17 @@ export default function App() {
           icon={<Calendar />} 
           label="الخطة" 
         />
+        {isAdmin && (
+          <NavButton 
+            active={activeTab === 'admin'} 
+            onClick={() => {
+              setActiveTab('admin');
+              sounds.playClick();
+            }} 
+            icon={<Sparkles />} 
+            label="أدمن" 
+          />
+        )}
         <NavButton 
           active={activeTab === 'profile' || activeTab === 'settings'} 
           onClick={() => {

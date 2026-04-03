@@ -16,6 +16,16 @@ service cloud.firestore {
     //   - email: string (required) - Student email
     //   - photoURL: string (optional) - Profile photo URL
     //   - settings: map (optional) - User settings
+    //   - phone: string (optional) - Verified phone number
+    //   - phoneVerified: bool (optional) - Whether the phone number is verified
+    //
+    // Collection: notifications
+    // Document ID: {notificationId} (Auto-generated)
+    // Fields:
+    //   - adminId: string (required) - The UID of the admin
+    //   - message: string (required) - The message content
+    //   - recipientCount: number (optional) - Number of recipients
+    //   - timestamp: timestamp (required) - Server timestamp
     //
     // Collection: messages
     // Document ID: {messageId} (Auto-generated)
@@ -59,7 +69,9 @@ service cloud.firestore {
       return isAuthenticated() &&
         ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          (request.auth.token.email == "raed41590@gmail.com" && request.auth.token.email_verified == true));
+          (request.auth.token.email == "raed41590@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == '+966573192557'));
     }
 
     function isValidUser(data) {
@@ -83,6 +95,13 @@ service cloud.firestore {
       return data.keys().hasAll(['userId', 'title', 'timestamp']) &&
              data.userId is string && data.userId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['adminId', 'message', 'timestamp']) &&
+             data.adminId is string && data.adminId == request.auth.uid &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 1000 &&
              data.timestamp is timestamp;
     }
 
@@ -111,6 +130,13 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidSession(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidNotification(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Default deny

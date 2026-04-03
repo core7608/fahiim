@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from 'react-live';
-import { motion } from 'framer-motion';
-import { Play, Code, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Play, Code, Maximize2, Minimize2, Copy, Check, Sparkles, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 import * as LucideIcons from 'lucide-react';
@@ -14,9 +14,14 @@ interface JsxViewerProps {
 const scope = { 
   ...LucideIcons, 
   motion, 
+  AnimatePresence,
   cn, 
   useState, 
-  React 
+  React,
+  Sparkles,
+  Info,
+  AlertCircle,
+  CheckCircle2
 };
 
 export const JsxViewer: React.FC<JsxViewerProps> = ({ code, className }) => {
@@ -81,7 +86,7 @@ export const JsxViewer: React.FC<JsxViewerProps> = ({ code, className }) => {
         "relative bg-slate-50",
         isExpanded ? "h-[calc(100%-64px)]" : "h-[400px]"
       )}>
-        <LiveProvider code={code} scope={scope} noInline={false}>
+        <LiveProvider code={code} scope={scope} noInline={code.includes('render(')}>
           {view === 'preview' ? (
             <div className="h-full overflow-auto p-6">
               <LivePreview />
