@@ -1,26 +1,132 @@
 import React, { useState } from 'react';
-import { motion, useMotionValue } from 'motion/react';
+import { motion, useMotionValue, AnimatePresence } from 'motion/react';
 import { LiveProvider, LivePreview, LiveError } from 'react-live';
 import { cn } from '@/src/lib/utils';
-import { Code, MessageCircle, Sparkles } from 'lucide-react';
+import { Code, MessageCircle, Sparkles, CheckCircle2, XCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { JsxViewer } from './JsxViewer';
 
-export const FahimVoice: React.FC<{ text: string, position?: 'top' | 'bottom' }> = ({ text, position = 'bottom' }) => (
-  <motion.div 
-    initial={{ opacity: 0, y: position === 'bottom' ? 10 : -10, scale: 0.9 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    className={cn(
-      "absolute z-20 flex items-start gap-3 max-w-[80%] pointer-events-none",
-      position === 'bottom' ? "bottom-4 right-4" : "top-4 right-4"
-    )}
-  >
-    <div className="bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none text-[10px] font-bold shadow-xl border border-slate-700 leading-relaxed">
-      {text}
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+const QuizSim: React.FC<{ questions: QuizQuestion[] }> = ({ questions }) => {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+
+  const handleAnswer = (option: string) => {
+    if (showResult) return;
+    setSelectedOption(option);
+    setShowResult(true);
+    if (option === questions[currentIdx].correctAnswer) {
+      setScore(score + 1);
+    }
+  };
+
+  const nextQuestion = () => {
+    if (currentIdx + 1 < questions.length) {
+      setCurrentIdx(currentIdx + 1);
+      setSelectedOption(null);
+      setShowResult(false);
+    } else {
+      setFinished(true);
+    }
+  };
+
+  const resetQuiz = () => {
+    setCurrentIdx(0);
+    setSelectedOption(null);
+    setShowResult(false);
+    setScore(0);
+    setFinished(false);
+  };
+
+  if (finished) {
+    return (
+      <div className="p-8 glass-card bg-emerald-50/30 border-emerald-100 flex flex-col items-center gap-6 text-center">
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+          <Sparkles className="w-10 h-10" />
+        </div>
+        <div>
+          <h4 className="text-2xl font-display font-black text-emerald-900">خلصت الاختبار يا بطل!</h4>
+          <p className="text-emerald-700 font-medium mt-2">درجتك: {score} من {questions.length}</p>
+        </div>
+        <button 
+          onClick={resetQuiz}
+          className="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100"
+        >
+          <RotateCcw className="w-5 h-5" />
+          <span>جرب تاني</span>
+        </button>
+      </div>
+    );
+  }
+
+  const q = questions[currentIdx];
+
+  return (
+    <div className="p-6 glass-card bg-blue-50/30 border-blue-100 flex flex-col gap-6" dir="rtl">
+      <div className="flex justify-between items-center">
+        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">سؤال {currentIdx + 1} من {questions.length}</span>
+        <div className="flex gap-1">
+          {questions.map((_, i) => (
+            <div key={i} className={cn("w-2 h-1 rounded-full", i <= currentIdx ? "bg-blue-500" : "bg-blue-100")} />
+          ))}
+        </div>
+      </div>
+
+      <h4 className="text-lg font-bold text-slate-800 leading-relaxed">{q.question}</h4>
+
+      <div className="space-y-3">
+        {q.options.map((opt, i) => (
+          <button
+            key={i}
+            onClick={() => handleAnswer(opt)}
+            disabled={showResult}
+            className={cn(
+              "w-full p-4 rounded-2xl text-right font-medium transition-all border-2 flex items-center justify-between group",
+              selectedOption === opt 
+                ? (opt === q.correctAnswer ? "border-emerald-500 bg-emerald-50" : "border-rose-500 bg-rose-50")
+                : (showResult && opt === q.correctAnswer ? "border-emerald-500 bg-emerald-50" : "border-slate-100 bg-white hover:border-blue-200")
+            )}
+          >
+            <span>{opt}</span>
+            {showResult && opt === q.correctAnswer && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+            {showResult && selectedOption === opt && opt !== q.correctAnswer && <XCircle className="w-5 h-5 text-rose-500" />}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {showResult && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "p-4 rounded-2xl text-sm leading-relaxed",
+              selectedOption === q.correctAnswer ? "bg-emerald-100/50 text-emerald-800" : "bg-rose-100/50 text-rose-800"
+            )}
+          >
+            <p className="font-bold mb-1">{selectedOption === q.correctAnswer ? "صح يا وحش! 🔥" : "للاسف غلط.. ركز في اللي جاي"}</p>
+            <p className="opacity-80">{q.explanation}</p>
+            <button 
+              onClick={nextQuestion}
+              className="mt-4 w-full bg-white/50 hover:bg-white py-2 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+            >
+              <span>{currentIdx + 1 < questions.length ? 'السؤال اللي بعده' : 'شوف النتيجة'}</span>
+              <ArrowRight className="w-4 h-4 rotate-180" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-    <div className="w-8 h-8 bg-glass-blue rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-      <Sparkles className="w-4 h-4 text-white" />
-    </div>
-  </motion.div>
-);
+  );
+};
 
 interface GravityProps {
   mass1: number;
@@ -106,40 +212,8 @@ const ReactionSim: React.FC<{ elements: string[] }> = ({ elements }) => {
   );
 };
 
-const JsxRunner: React.FC<{ code: string }> = ({ code }) => {
-  const [showCode, setShowCode] = useState(false);
-  
-  return (
-    <div className="w-full glass-card overflow-hidden border-blue-100 shadow-lg">
-      <div className="bg-blue-50/50 p-3 border-b border-blue-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-rose-400 rounded-full" />
-          <div className="w-2 h-2 bg-amber-400 rounded-full" />
-          <div className="w-2 h-2 bg-emerald-400 rounded-full" />
-          <span className="text-[10px] font-bold text-blue-900 mr-2">عارض فهيم الرسومي</span>
-        </div>
-        <button 
-          onClick={() => setShowCode(!showCode)}
-          className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
-        >
-          <Code className="w-4 h-4" />
-        </button>
-      </div>
-      
-      <div className="p-6 bg-white min-h-[150px] flex items-center justify-center relative">
-        <LiveProvider code={code} scope={{ motion, cn, FahimVoice, useMotionValue, useState }}>
-          <LivePreview />
-          <LiveError className="text-xs text-rose-500 bg-rose-50 p-2 rounded-lg mt-2 font-mono" />
-        </LiveProvider>
-      </div>
-      
-      {showCode && (
-        <div className="p-4 bg-slate-900 text-slate-300 text-[10px] font-mono overflow-x-auto">
-          <pre>{code}</pre>
-        </div>
-      )}
-    </div>
-  );
+export const JsxRunner: React.FC<{ code: string }> = ({ code }) => {
+  return <JsxViewer code={code} />;
 };
 
 const GraphSim: React.FC<{ equation: string }> = ({ equation }) => {
@@ -183,17 +257,10 @@ export const InteractiveRenderer: React.FC<{ data: string, type?: 'interactive' 
       rendered = <ReactionSim {...component.props} />;
     } else if (component.type === 'math') {
       rendered = <GraphSim {...component.props} />;
+    } else if (component.type === 'quiz') {
+      rendered = <QuizSim questions={component.props} />;
     } else {
       rendered = <div className="p-4 bg-slate-100 rounded-xl text-xs italic">مكون تفاعلي قيد التطوير...</div>;
-    }
-
-    if (rendered && component.fahimComment) {
-      return (
-        <div className="relative">
-          {rendered}
-          <FahimVoice text={component.fahimComment} />
-        </div>
-      );
     }
 
     return rendered;

@@ -1,23 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Beaker, Settings, User as UserIcon, Sparkles, Calendar, Wrench } from 'lucide-react';
+import { MessageSquare, Settings, User as UserIcon, Sparkles, Calendar, Wrench, Loader2 } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { Chat } from './components/Chat';
-import { Lab } from './components/Lab';
 import { Toolbox } from './components/Toolbox';
 import { SettingsView } from './components/SettingsView';
 import { User, INITIAL_STUDY_PLAN, StudyItem } from './types';
 import { cn } from './lib/utils';
 import { sounds } from './lib/sounds';
+import { loadFromDrive } from './services/googleDrive';
+import { auth, onAuthStateChanged, db, doc, getDoc, handleFirestoreError, OperationType } from './lib/firebase';
 
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'chat' | 'lab' | 'plan' | 'profile' | 'settings' | 'tools'>('chat');
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'chat' | 'plan' | 'profile' | 'settings' | 'tools'>('chat');
   const [isGenerating, setIsGenerating] = useState(false);
   const [studyPlan, setStudyPlan] = useState<StudyItem[]>(INITIAL_STUDY_PLAN);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data() as User);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const toggleStudyItem = (id: string) => {
     setStudyPlan(prev => prev.map(item => {
@@ -62,6 +85,40 @@ export default function App() {
     setIsGenerating(false);
   };
 
+  useEffect(() => {
+    if (user?.settings?.customColors) {
+      const colors = user.settings.customColors;
+      const root = document.documentElement;
+      if (colors.primary) root.style.setProperty('--glass-blue', colors.primary);
+      if (colors.background) root.style.setProperty('--bg-slate-50', colors.background);
+      if (colors.accent) root.style.setProperty('--accent-color', colors.accent);
+    }
+  }, [user?.settings?.customColors]);
+
+  useEffect(() => {
+    const loadDriveData = async () => {
+      if (user?.settings?.googleDriveEnabled) {
+        try {
+          const data = await loadFromDrive();
+          if (data && data.user) {
+            setUser(data.user);
+          }
+        } catch (e) {
+          console.error("Auto-load Drive failed:", e);
+        }
+      }
+    };
+    if (user) loadDriveData();
+  }, [user?.settings?.googleDriveEnabled]);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-white">
+        <Loader2 className="w-12 h-12 text-glass-blue animate-spin" />
+      </div>
+    );
+  }
+
   if (!user) {
     return <Auth onLogin={setUser} />;
   }
@@ -79,18 +136,12 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="h-full"
             >
-              <Chat user={user} studyPlan={studyPlan} />
-            </motion.div>
-          )}
-          {activeTab === 'lab' && (
-            <motion.div 
-              key="lab"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="h-full"
-            >
-              <Lab />
+              <Chat 
+                user={user} 
+                studyPlan={studyPlan} 
+                onUpdateUser={setUser} 
+                onUpdateStudyPlan={setStudyPlan}
+              />
             </motion.div>
           )}
           {activeTab === 'tools' && (
@@ -101,7 +152,7 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="h-full"
             >
-              <Toolbox />
+              <Toolbox user={user} />
             </motion.div>
           )}
           {activeTab === 'plan' && (
@@ -186,7 +237,7 @@ export default function App() {
               dir="rtl"
             >
               <div className="w-32 h-32 bg-slate-100 rounded-[3rem] flex items-center justify-center relative">
-                <UserIcon className="w-16 h-16 text-slate-400" />
+                <img src={user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt="Profile" className="w-full h-full rounded-[3rem] object-cover" />
                 <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-glass-blue rounded-2xl flex items-center justify-center text-white shadow-lg">
                   <Sparkles className="w-6 h-6" />
                 </div>
@@ -237,12 +288,6 @@ export default function App() {
                   <span className="font-bold text-slate-700">الإعدادات</span>
                   <Settings className="w-5 h-5 text-slate-400" />
                 </button>
-                <button 
-                  onClick={() => setUser(null)}
-                  className="w-full p-4 text-rose-500 font-bold hover:bg-rose-50 rounded-3xl transition-colors"
-                >
-                  تسجيل الخروج
-                </button>
               </div>
             </motion.div>
           )}
@@ -254,7 +299,12 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="h-full"
             >
-              <SettingsView onBack={() => setActiveTab('profile')} />
+              <SettingsView 
+                user={user} 
+                onBack={() => setActiveTab('profile')} 
+                onUpdateUser={setUser}
+                onLogout={() => setUser(null)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -270,15 +320,6 @@ export default function App() {
           }} 
           icon={<MessageSquare />} 
           label="المحادثة" 
-        />
-        <NavButton 
-          active={activeTab === 'lab'} 
-          onClick={() => {
-            setActiveTab('lab');
-            sounds.playClick();
-          }} 
-          icon={<Beaker />} 
-          label="المختبر" 
         />
         <NavButton 
           active={activeTab === 'tools'} 

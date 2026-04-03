@@ -1,14 +1,59 @@
 export interface User {
+  uid: string;
   name: string;
   year: string;
   bio: string;
+  email?: string;
+  photoURL?: string;
+  settings?: UserSettings;
+  customTools?: Tool[]; // Tools saved in Drive/Firestore
+}
+
+export interface UserSettings {
+  geminiApiKey?: string;
+  openaiApiKey?: string;
+  fahimPersonality?: string; // Custom personality description
+  theme?: string; // Theme ID
+  gender?: 'male' | 'female';
+  googleDriveEnabled?: boolean;
+  customColors?: {
+    primary?: string;
+    secondary?: string;
+    accent?: string;
+    background?: string;
+  };
+}
+
+export interface ThemeConfig {
+  id: string;
+  name: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+  };
+  isCustom?: boolean;
+}
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  title: string;
+  lastMessage: string;
+  timestamp: any;
 }
 
 export interface Message {
   id: string;
+  chatId?: string; // Link message to a session
   role: 'user' | 'model';
   text: string;
   interactive?: InteractiveComponent;
+  timestamp?: any;
+  fileUrl?: string;
+  fileName?: string;
 }
 
 export interface InteractiveComponent {
@@ -41,10 +86,10 @@ export interface Tool {
 }
 
 export const STUDY_TOOLS: Tool[] = [
-  // Productivity
-  { id: 'pomodoro', name: 'تايمر بومودورو', description: 'ركز 25 دقيقة وخد بريك 5 دقائق', category: 'productivity', icon: 'Timer' },
+  // Productivity (10)
+  { id: 'pomodoro', name: 'تايمر بومودورو', description: 'نظام تركيز (25 دقيقة مذاكرة + 5 دقائق راحة)', category: 'productivity', icon: 'Timer' },
   { id: 'todo', name: 'قائمة مهام ذكية', description: 'نظم مذاكرتك خطوة بخطوة', category: 'productivity', icon: 'CheckSquare' },
-  { id: 'stopwatch', name: 'ساعة إيقاف', description: 'احسب وقت حلك للمسائل', category: 'productivity', icon: 'Clock' },
+  { id: 'stopwatch', name: 'ساعة إيقاف', description: 'احسب وقت حلك للمسائل بدقة', category: 'productivity', icon: 'Clock' },
   { id: 'focus-music', name: 'موسيقى تركيز', description: 'أصوات هادية تساعدك على المذاكرة', category: 'productivity', icon: 'Music' },
   { id: 'habit-tracker', name: 'متتبع العادات', description: 'ابني عادات مذاكرة قوية', category: 'productivity', icon: 'Zap' },
   { id: 'daily-planner', name: 'مخطط يومي', description: 'رتب يومك من الصبح لليل', category: 'productivity', icon: 'Calendar' },
@@ -53,8 +98,8 @@ export const STUDY_TOOLS: Tool[] = [
   { id: 'study-timer', name: 'مؤقت المذاكرة', description: 'احسب وقت كل مادة لوحدها', category: 'productivity', icon: 'Hourglass' },
   { id: 'break-reminder', name: 'منبه الاستراحة', description: 'ماتنساش تاخد بريك عشان تفصل', category: 'productivity', icon: 'Coffee' },
   
-  // Math
-  { id: 'calculator', name: 'آلة حاسبة علمية (Casio Style)', description: 'حل أصعب المعادلات واللوغاريتمات', category: 'math', icon: 'Calculator' },
+  // Math (10)
+  { id: 'calculator', name: 'آلة حاسبة علمية', description: 'حل أصعب المعادلات واللوغاريتمات', category: 'math', icon: 'Calculator' },
   { id: 'unit-converter', name: 'محول وحدات', description: 'حول بين الطول، الوزن، والحرارة', category: 'math', icon: 'ArrowLeftRight' },
   { id: 'geometry-solver', name: 'حل الهندسة', description: 'احسب المساحات والأحجام للأشكال', category: 'math', icon: 'Square' },
   { id: 'algebra-helper', name: 'مساعد الجبر', description: 'تبسيط المعادلات وحل المجاهيل', category: 'math', icon: 'Variable' },
@@ -65,19 +110,26 @@ export const STUDY_TOOLS: Tool[] = [
   { id: 'fraction-calc', name: 'حاسبة الكسور', description: 'عمليات على الكسور العادية والعشرية', category: 'math', icon: 'Divide' },
   { id: 'percentage-calc', name: 'حاسبة النسب', description: 'احسب النسب المئوية والزيادة والنقص', category: 'math', icon: 'Percent' },
 
-  // Science
+  // Science (10)
   { id: 'periodic-table', name: 'الجدول الدوري', description: 'استكشف العناصر الكيميائية وخصائصها', category: 'science', icon: 'Grid' },
   { id: 'physics-formulas', name: 'قوانين الفيزياء', description: 'كل القوانين اللي محتاجها في مكان واحد', category: 'science', icon: 'Zap' },
   { id: 'chem-balancer', name: 'وزن المعادلات', description: 'وزن المعادلات الكيميائية الصعبة', category: 'science', icon: 'FlaskConical' },
   { id: 'bio-atlas', name: 'أطلس الأحياء', description: 'رسومات توضيحية لأجهزة الجسم', category: 'science', icon: 'Dna' },
-  { id: 'space-explorer', name: 'مستكشف الفضاء', description: 'معلومات عن الكواكب والنجوم', category: 'science', icon: 'Orbit' },
-  { id: 'earth-science', name: 'علوم الأرض', description: 'طبقات الأرض والبراكين والزلازل', category: 'science', icon: 'Globe' },
   { id: 'lab-simulator', name: 'محاكي المعمل', description: 'تجارب افتراضية آمنة', category: 'science', icon: 'TestTube' },
   { id: 'optics-tool', name: 'أداة البصريات', description: 'دراسة المرايا والعدسات والضوء', category: 'science', icon: 'Sun' },
   { id: 'mechanics-calc', name: 'حاسبة الميكانيكا', description: 'القوة والحركة والطاقة', category: 'science', icon: 'Cog' },
   { id: 'electricity-tool', name: 'أداة الكهرباء', description: 'قانون أوم والدوائر الكهربائية', category: 'science', icon: 'Battery' },
+  { id: 'molecular-viewer', name: 'عارض الجزيئات', description: 'شوف تركيب الجزيئات في 3D', category: 'science', icon: 'Layers' },
+  { id: 'ecosystem-sim', name: 'محاكي البيئة', description: 'دراسة السلاسل الغذائية والتوازن البيئي', category: 'science', icon: 'Globe' },
 
-  // Languages
+  // Astronomy (5)
+  { id: 'space-explorer', name: 'مستكشف الفضاء', description: 'معلومات عن الكواكب والنجوم', category: 'science', icon: 'Orbit' },
+  { id: 'star-map', name: 'خريطة النجوم', description: 'تعرف على المجموعات النجمية', category: 'science', icon: 'Sparkles' },
+  { id: 'moon-phases', name: 'أطوار القمر', description: 'تابع شكل القمر خلال الشهر', category: 'science', icon: 'Moon' },
+  { id: 'telescope-view', name: 'رؤية التلسكوب', description: 'محاكاة لرؤية الأجرام السماوية', category: 'science', icon: 'Telescope' },
+  { id: 'gravity-sim', name: 'محاكي الجاذبية', description: 'تأثير الجاذبية بين الكواكب', category: 'science', icon: 'CircleDot' },
+
+  // Languages (10)
   { id: 'dictionary', name: 'قاموس ذكي', description: 'ترجمة فورية ومعاني الكلمات', category: 'languages', icon: 'Book' },
   { id: 'verb-conjugator', name: 'تصريف الأفعال', description: 'تصريف الأفعال في كل الأزمنة', category: 'languages', icon: 'Languages' },
   { id: 'grammar-checker', name: 'مصحح القواعد', description: 'تأكد من صحة كتابتك', category: 'languages', icon: 'Check' },
@@ -89,35 +141,10 @@ export const STUDY_TOOLS: Tool[] = [
   { id: 'translation-pro', name: 'مترجم محترف', description: 'ترجمة نصوص طويلة بدقة', category: 'languages', icon: 'Globe2' },
   { id: 'language-quiz', name: 'كويز لغات', description: 'اختبر مستواك في اللغة', category: 'languages', icon: 'HelpCircle' },
 
-  // General
+  // General (5)
   { id: 'summarizer', name: 'ملخص النصوص', description: 'لخص الدروس الطويلة في نقط بسيطة', category: 'general', icon: 'FileText' },
   { id: 'flashcards', name: 'كروت الذاكرة', description: 'احفظ الكلمات والتعريفات بسرعة', category: 'general', icon: 'Layers' },
   { id: 'gpa-calc', name: 'حساب المعدل', description: 'احسب مجموعك وتقديرك المتوقع', category: 'general', icon: 'Percent' },
   { id: 'mind-map', name: 'خريطة ذهنية', description: 'اربط المعلومات ببعضها بصرياً', category: 'general', icon: 'Share2' },
-  { id: 'exam-countdown', name: 'عد تنازلي للامتحان', description: 'فاضل كام يوم على المعمعة؟', category: 'general', icon: 'Clock' },
   { id: 'note-taker', name: 'مدون الملاحظات', description: 'اكتب أهم النقط ورا المدرس', category: 'general', icon: 'PenTool' },
-  { id: 'pdf-viewer', name: 'قارئ PDF', description: 'افتح ملازمك وكتبك بسهولة', category: 'general', icon: 'File' },
-  { id: 'audio-recorder', name: 'مسجل صوتي', description: 'سجل المحاضرات عشان تسمعها تاني', category: 'general', icon: 'Mic' },
-  { id: 'citation-gen', name: 'مولد المراجع', description: 'وثق مصادرك بطريقة صحيحة', category: 'general', icon: 'Link' },
-  { id: 'study-group', name: 'مجموعات مذاكرة', description: 'ذاكر مع صحابك أونلاين', category: 'general', icon: 'Users' },
-];
-
-// Fill the rest to reach 100
-for (let i = STUDY_TOOLS.length + 1; i <= 100; i++) {
-  STUDY_TOOLS.push({
-    id: `tool-${i}`,
-    name: `أداة ذكية ${i}`,
-    description: 'أداة مساعدة متطورة جاري تخصيصها لمادتك الدراسية.',
-    category: i % 5 === 0 ? 'productivity' : i % 4 === 0 ? 'math' : i % 3 === 0 ? 'science' : i % 2 === 0 ? 'languages' : 'general',
-    icon: 'Wrench'
-  });
-}
-
-export const LABS = [
-  { id: 'physics', name: 'الفيزياء', icon: 'Zap', color: 'bg-blue-500' },
-  { id: 'chemistry', name: 'الكيمياء', icon: 'FlaskConical', color: 'bg-emerald-500' },
-  { id: 'math', name: 'الرياضيات', icon: 'Calculator', color: 'bg-indigo-500' },
-  { id: 'biology', name: 'الأحياء', icon: 'Dna', color: 'bg-rose-500' },
-  { id: 'astronomy', name: 'الفلك', icon: 'Telescope', color: 'bg-violet-500' },
-  { id: 'history', name: 'التاريخ', icon: 'Scroll', color: 'bg-amber-500' },
 ];

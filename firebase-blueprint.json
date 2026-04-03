@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores student profile information and settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Student name" },
+        "year": { "type": "string", "description": "Academic year" },
+        "bio": { "type": "string", "description": "Student bio" },
+        "email": { "type": "string", "format": "email", "description": "Student email" },
+        "photoURL": { "type": "string", "description": "Profile photo URL" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string" },
+            "voiceEnabled": { "type": "boolean" },
+            "voiceSpeed": { "type": "number" },
+            "fahimPersonality": { "type": "string" },
+            "geminiApiKey": { "type": "string" },
+            "openaiApiKey": { "type": "string" }
+          }
+        }
+      },
+      "required": ["uid", "name", "year", "email"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Stores conversation history between the student and Fahim.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the student" },
+        "chatId": { "type": "string", "description": "The ID of the chat session" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "text": { "type": "string", "description": "The message content" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "interactive": { "type": "object" }
+      },
+      "required": ["userId", "role", "text", "timestamp"]
+    },
+    "Session": {
+      "title": "Chat Session",
+      "description": "Stores a group of messages as a single conversation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the student" },
+        "title": { "type": "string", "description": "The title of the session" },
+        "lastMessage": { "type": "string", "description": "The last message in the session" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages"
+    },
+    "sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Chat sessions"
+    }
+  }
+}

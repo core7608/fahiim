@@ -8,11 +8,74 @@ import {
   LineChart, BarChart, Triangle, Divide, FlaskConical,
   Dna, Orbit, Globe, TestTube, Sun, Cog, Battery,
   Languages, Check, Plus, Volume2, Repeat, MessageCircle,
-  Type, Globe2, HelpCircle, PenTool, File, Mic, Link, Users
+  Type, Globe2, HelpCircle, PenTool, File, Mic, Link, Users,
+  Search, Wand2, Sparkles, ChevronRight
 } from 'lucide-react';
-import { STUDY_TOOLS, Tool } from '../types';
+import { STUDY_TOOLS, Tool, User } from '../types';
 import { cn } from '../lib/utils';
 import { sounds } from '../lib/sounds';
+import { JsxRunner } from './InteractiveRenderer';
+import { getFahimResponse } from '../services/gemini';
+
+const CustomToolCreator = ({ user, onGenerated }: { user: User, onGenerated: (code: string) => void }) => {
+  const [prompt, setPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!prompt.trim()) return;
+    setIsGenerating(true);
+    sounds.playClick();
+    
+    try {
+      const systemPrompt = `أنت مبرمج أدوات تعليمية محترف. 
+      المطلوب: برمجة أداة React (JSX) بناءً على وصف الطالب.
+      استخدم Tailwind CSS و Lucide Icons و Framer Motion.
+      يجب أن يكون الكود كاملاً وقابلاً للتشغيل داخل LiveProvider.
+      رد بالكود فقط داخل علامات \`\`\`jsx ... \`\`\`.
+      الوصف: ${prompt}`;
+
+      const response = await getFahimResponse([
+        { role: 'user', parts: [{ text: systemPrompt }] }
+      ], user);
+
+      const jsxMatch = response.match(/```jsx([\s\S]*?)```/);
+      if (jsxMatch && jsxMatch[1]) {
+        onGenerated(jsxMatch[1].trim());
+        sounds.playSuccess();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="glass-card p-6 border-blue-200 bg-blue-50/30 space-y-4">
+      <div className="flex items-center gap-3 text-blue-700">
+        <Wand2 className="w-6 h-6 animate-pulse" />
+        <h3 className="text-lg font-bold">برمج أداتك الخاصة مع فهيم</h3>
+      </div>
+      <p className="text-sm text-slate-600">اوصف الأداة اللي في خيالك وفهيم هيبرمجها لك في ثواني!</p>
+      <div className="flex gap-2">
+        <input 
+          type="text" 
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="مثلاً: حاسبة سرعة الضوء، أو تايمر للمذاكرة بشكل مختلف..."
+          className="flex-1 bg-white border border-blue-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <button 
+          onClick={handleCreate}
+          disabled={isGenerating}
+          className="bg-glass-blue text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all disabled:opacity-50"
+        >
+          {isGenerating ? 'جاري البرمجة...' : 'برمج الآن'}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const IconMap: Record<string, any> = {
   Timer, Calculator, ArrowLeftRight, Grid, Zap, Book, 
@@ -24,18 +87,83 @@ const IconMap: Record<string, any> = {
   Type, Globe2, HelpCircle, PenTool, File, Mic, Link, Users
 };
 
-export const Toolbox: React.FC = () => {
+export const Toolbox: React.FC<{ user: User }> = ({ user }) => {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [filter, setFilter] = useState<Tool['category'] | 'all'>('all');
+  const [search, setSearch] = useState('');
+  const [customCode, setCustomCode] = useState<string | null>(null);
 
-  const filteredTools = filter === 'all' ? STUDY_TOOLS : STUDY_TOOLS.filter(t => t.category === filter);
+  const filteredTools = STUDY_TOOLS.filter(t => {
+    const matchesSearch = t.name.includes(search) || t.description.includes(search);
+    const matchesCat = filter === 'all' || t.category === filter;
+    return matchesSearch && matchesCat;
+  });
+
+  if (customCode) {
+    return (
+      <div className="h-full bg-slate-50/50 p-6 overflow-y-auto" dir="rtl">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <button 
+            onClick={() => { setCustomCode(null); sounds.playClick(); }}
+            className="flex items-center gap-2 text-glass-blue font-bold"
+          >
+            <ChevronRight className="w-5 h-5" />
+            <span>الرجوع للأدوات</span>
+          </button>
+          <div className="glass-card p-8 min-h-[500px]">
+             <JsxRunner code={customCode} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-slate-50/50 p-6 overflow-y-auto" dir="rtl">
       <div className="max-w-5xl mx-auto space-y-8">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-display font-black text-slate-900">صندوق الأدوات</h1>
-          <p className="text-slate-500 font-medium">100 أداة ذكية شغالة لمساعدتك في كل المواد</p>
+        <header className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-display font-black text-slate-900">صندوق الأدوات</h1>
+              <p className="text-slate-500 font-medium">50 أداة ذكية لمساعدتك في كل المواد</p>
+            </div>
+            <div className="w-12 h-12 bg-glass-blue rounded-2xl flex items-center justify-center text-white shadow-lg">
+              <Wrench className="w-6 h-6" />
+            </div>
+          </div>
+
+          <CustomToolCreator user={user} onGenerated={setCustomCode} />
+
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input 
+                type="text"
+                placeholder="ابحث عن أداة..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white border-none rounded-2xl py-4 pr-12 pl-4 shadow-sm focus:ring-2 focus:ring-glass-blue transition-all"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {['all', 'productivity', 'math', 'science', 'languages', 'general'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => { setFilter(f as any); sounds.playClick(); }}
+                  className={cn(
+                    "px-6 py-2 rounded-xl font-bold whitespace-nowrap transition-all",
+                    filter === f ? "bg-glass-blue text-white shadow-md" : "bg-white text-slate-500 hover:bg-blue-50"
+                  )}
+                >
+                  {f === 'all' ? 'الكل' : 
+                   f === 'productivity' ? 'إنتاجية' :
+                   f === 'math' ? 'رياضيات' :
+                   f === 'science' ? 'علوم وفضاء' :
+                   f === 'languages' ? 'لغات' : 'عام'}
+                </button>
+              ))}
+            </div>
+          </div>
         </header>
 
         <AnimatePresence mode="wait">
@@ -45,49 +173,28 @@ export const Toolbox: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-6"
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
             >
-              {/* Filters */}
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                {['all', 'productivity', 'math', 'science', 'languages', 'general'].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => { setFilter(f as any); sounds.playClick(); }}
-                    className={cn(
-                      "px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all",
-                      filter === f ? "bg-glass-blue text-white shadow-lg" : "bg-white text-slate-500 hover:bg-blue-50"
-                    )}
+              {filteredTools.map((tool) => {
+                const Icon = IconMap[tool.icon] || Wrench;
+                return (
+                  <motion.button
+                    key={tool.id}
+                    layout
+                    whileHover={{ y: -4 }}
+                    onClick={() => { setSelectedTool(tool); sounds.playClick(); }}
+                    className="glass-card p-5 flex flex-col items-center gap-3 hover:scale-[1.02] transition-all group text-center"
                   >
-                    {f === 'all' ? 'الكل' : 
-                     f === 'productivity' ? 'الإنتاجية' :
-                     f === 'math' ? 'الرياضيات' :
-                     f === 'science' ? 'العلوم' :
-                     f === 'languages' ? 'اللغات' : 'عام'}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {filteredTools.map((tool) => {
-                  const Icon = IconMap[tool.icon] || Wrench;
-                  return (
-                    <motion.button
-                      key={tool.id}
-                      layout
-                      onClick={() => { setSelectedTool(tool); sounds.playClick(); }}
-                      className="glass-card p-5 flex flex-col items-center gap-3 hover:scale-[1.02] transition-all group text-center"
-                    >
-                      <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-glass-blue group-hover:rotate-12 transition-transform">
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="font-bold text-slate-800 text-sm">{tool.name}</h3>
-                        <p className="text-[10px] text-slate-400 line-clamp-1">{tool.description}</p>
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-glass-blue group-hover:rotate-12 transition-transform">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-800 text-sm">{tool.name}</h3>
+                      <p className="text-[10px] text-slate-400 line-clamp-1">{tool.description}</p>
+                    </div>
+                  </motion.button>
+                );
+              })}
             </motion.div>
           ) : (
             <motion.div 
@@ -122,9 +229,22 @@ export const Toolbox: React.FC = () => {
                     {selectedTool.id === 'gpa-calc' && <GPACalculatorTool />}
                     {!['pomodoro', 'calculator', 'unit-converter', 'gpa-calc'].includes(selectedTool.id) && (
                       <div className="text-center space-y-4">
-                        <Wrench className="w-12 h-12 text-slate-200 mx-auto animate-spin-slow" />
+                        <Sparkles className="w-12 h-12 text-slate-200 mx-auto animate-pulse" />
                         <p className="text-slate-400 text-sm italic">هذه الأداة ({selectedTool.name}) جاهزة للاستخدام الذكي في مادتك.</p>
-                        <button className="glass-button text-xs">تفعيل الأداة</button>
+                        <button 
+                          onClick={async () => {
+                            const systemPrompt = `برمج أداة تعليمية كاملة لـ ${selectedTool.name} (${selectedTool.description}). استخدم Tailwind CSS و Lucide Icons. رد بالكود فقط داخل علامات \`\`\`jsx ... \`\`\`.`;
+                            const response = await getFahimResponse([{ role: 'user', parts: [{ text: systemPrompt }] }], user);
+                            const jsxMatch = response.match(/```jsx([\s\S]*?)```/);
+                            if (jsxMatch && jsxMatch[1]) {
+                              setCustomCode(jsxMatch[1].trim());
+                              sounds.playSuccess();
+                            }
+                          }}
+                          className="glass-button text-xs"
+                        >
+                          اطلب من فهيم برمجتها الآن
+                        </button>
                       </div>
                     )}
                   </div>
